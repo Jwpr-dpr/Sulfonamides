@@ -1,0 +1,60 @@
+import os
+from ase.io import read, write
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+
+positions = ["P51", "P52", "P53", "P61", "P62", "P63"]
+
+# Function to save POV-Ray rendered image using pvengine
+def save_povray_image(atoms, filename, title):
+    pov_filename = filename.replace('.png', '.pov')
+    
+    # Write the structure to a POV-Ray file with explicit rotation for z-view
+    write(pov_filename, atoms, rotation='90x,0y,0z', show_unit_cell=2, radii=0.3)
+    
+    # Add custom background and bond settings to the POV-Ray file
+    with open(pov_filename, 'a') as f:
+        f.write('\nbackground { color rgb <1, 1, 1> }\n')  # White background
+        f.write('\n#declare Bond_radius = 0.1;\n')  # Adjust bond radius if necessary
+        f.write('\n#declare Bond_color = rgb <0.5, 0.5, 0.5>;\n')  # Bond color
+
+    # Call pvengine to render the image
+    os.system(f'pvengine /RENDER {pov_filename} /EXIT')
+
+    # Rename the output file to match the expected filename
+    os.rename(pov_filename.replace('.pov', '.png'), filename)
+
+# Generate and save images of original structures with z-axis perspective
+for pos in positions:
+    atoms = read(f"BPSQ-SMZ-{pos}.cif")
+    atoms.set_cell([0, 0, 0])  # Remove the cell information
+    atoms.set_pbc([False, False, False])  # Disable periodic boundary conditions
+    save_povray_image(atoms, f"BPSQ-SMZ-{pos}-zview.png", "")
+
+# Generate and save images of relaxed structures with z-axis perspective
+for pos in positions:
+    atoms = read(f"BPSQ-SMZ-{pos}-relaxed-lcao.xyz")
+    atoms.set_cell([0, 0, 0])  # Remove the cell information
+    atoms.set_pbc([False, False, False])  # Disable periodic boundary conditions
+    save_povray_image(atoms, f"BPSQ-SMZ-{pos}-relaxed-lcao-zview.png", "")
+
+fig, axes = plt.subplots(2, 6, figsize=(18, 6))
+
+# Load and display original structure images with z-axis perspective
+for i, pos in enumerate(positions):
+    img = mpimg.imread(f"BPSQ-SMZ-{pos}-zview.png")
+    axes[0, i].imshow(img)
+    axes[0, i].set_title(f"Original {pos}")
+    axes[0, i].axis('off')
+
+# Load and display relaxed structure images with z-axis perspective
+for i, pos in enumerate(positions):
+    img = mpimg.imread(f"BPSQ-SMZ-{pos}-relaxed-lcao-zview.png")
+    axes[1, i].imshow(img)
+    axes[1, i].set_title(f"Relaxed {pos}")
+    axes[1, i].axis('off')
+
+# Adjust layout and save plot
+plt.tight_layout()
+plt.savefig('original_vs_relaxed_structures_zview.png')
+plt.show()
